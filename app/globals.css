@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import url("https://fonts.googleapis.com/css2?family=Smooch+Sans:wght@100..900&display=swap");
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* Fundo principal branco */
+  --foreground: 240 10% 5%; /* Texto principal escuro */
+  --card: 0 0% 98%; /* Fundo do cartão */
+  --card-foreground: 240 10% 5%; /* Texto no cartão */
+  --popover: 0 0% 98%; /* Fundo de popovers */
+  --popover-foreground: 240 10% 5%; /* Texto em popovers */
+  --primary: 25 95% 55%; /* Destaque principal (laranja) */
+  --primary-foreground: 0 0% 98%; /* Texto sobre o destaque principal */
+  --secondary: 240 5% 96%; /* Fundo secundário */
+  --secondary-foreground: 240 10% 5%; /* Texto secundário */
+  --muted: 240 5% 96%; /* Fundo de elementos neutros */
+  --muted-foreground: 240 3% 46%; /* Texto de elementos neutros */
+  --accent: 240 5% 96%; /* Fundo de elementos de destaque */
+  --accent-foreground: 240 10% 5%; /* Texto sobre elementos de destaque */
+  --destructive: 0 84% 60%; /* Elementos destrutivos (ex: erros) */
+  --destructive-foreground: 0 0% 98%; /* Texto em elementos destrutivos */
+  --border: 240 5% 90%; /* Cor da borda */
+  --input: 240 5% 90%; /* Fundo dos inputs */
+  --ring: 25 95% 55%; /* Cor de foco (laranja no tema claro) */
+  --chart-1: 12 76% 61%; /* Gráfico 1 */
+  --chart-2: 173 58% 39%; /* Gráfico 2 */
+  --chart-3: 197 37% 24%; /* Gráfico 3 */
+  --chart-4: 43 74% 66%; /* Gráfico 4 */
+  --chart-5: 27 87% 67%; /* Gráfico 5 */
+  --radius: 0.5rem; /* Raio das bordas */
+  }
+
+  .dark {
+    --background: 240 10% 5%; /* Fundo principal */
+  --foreground: 0 0% 95%; /* Texto principal */
+  --card: 240 10% 10%; /* Fundo do cartão */
+  --card-foreground: 0 0% 95%; /* Texto no cartão */
+  --popover: 240 10% 10%; /* Fundo de popovers */
+  --popover-foreground: 0 0% 95%; /* Texto em popovers */
+  --primary: 25 95% 55%; /* Destaque principal (laranja) */
+  --primary-foreground: 0 0% 98%; /* Texto sobre o destaque principal */
+  --secondary: 240 10% 8%; /* Fundo secundário */
+  --secondary-foreground: 0 0% 90%; /* Texto secundário */
+  --muted: 240 10% 8%; /* Fundo de elementos neutros */
+  --muted-foreground: 240 5% 65%; /* Texto de elementos neutros */
+  --accent: 240 10% 10%; /* Fundo de elementos de destaque */
+  --accent-foreground: 0 0% 95%; /* Texto sobre elementos de destaque */
+  --destructive: 0 65% 40%; /* Elementos destrutivos (ex: erros) */
+  --destructive-foreground: 0 0% 98%; /* Texto em elementos destrutivos */
+  --border: 240 10% 15%; /* Cor da borda */
+  --input: 240 10% 12%; /* Fundo dos inputs */
+  --ring: 25 95% 55%; /* Cor de foco (laranja no modo escuro) */
+  --chart-1: 12 76% 61%; /* Gráfico 1 */
+  --chart-2: 173 58% 39%; /* Gráfico 2 */
+  --chart-3: 197 37% 24%; /* Gráfico 3 */
+  --chart-4: 43 74% 66%; /* Gráfico 4 */
+  --chart-5: 27 87% 67%; /* Gráfico 5 */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Define a fonte Smooch Sans */
+@font-face {
+  font-family: "Smooch Sans";
+  src: url("/fonts/SmoochSans-Regular.woff2") format("woff2"), url("/fonts/SmoochSans-Regular.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* Define a fonte para o corpo */
+body {
+  font-family: "Smooch Sans", Arial, Helvetica, sans-serif;
+}
