@@ -1,7 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { Bell, Search, ChevronDown, PlusCircle, ArrowLeft, Upload } from "lucide-react"
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { Bell, Search, PlusCircle, ArrowLeft } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -26,68 +28,30 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
-import { Switch } from "@/components/ui/switch"
+import { toast } from "@/hooks/use-toast"
 
-
-
-// Mock data for operations with all required fields
-const operations = [
-  {
-    id: 1,
-    number: "OP001",
-    client: "Cliente A",
-    value: 10000,
-    status: "Em andamento",
-    personType: "fisica",
-    clientName: "João Silva",
-    clientEmail: "joao@example.com",
-    clientPhone: "(11) 98765-4321",
-    clientAddress: "Rua A, 123 - São Paulo, SP",
-    clientDocument: "123.456.789-00",
-    clientSalary: 5000,
-    profession: "Engenheiro",
-    professionalActivity: "Engenharia Civil",
-    propertyType: "Apartamento",
-    propertyValue: 300000,
-    propertyLocation: "Rua B, 456 - São Paulo, SP",
-    desiredValue: 200000,
-    incomeProof: "Holerite dos últimos 3 meses",
-    creditDefense: "Score de crédito alto, sem restrições",
-    documents: ["RG", "CPF", "Comprovante de residência"],
-  },
-  {
-    id: 2,
-    number: "OP002",
-    client: "Cliente B",
-    value: 15000,
-    status: "Concluída",
-    personType: "juridica",
-    clientName: "Empresa XYZ Ltda",
-    clientEmail: "contato@empresaxyz.com",
-    clientPhone: "(11) 3333-4444",
-    clientAddress: "Av. C, 789 - São Paulo, SP",
-    clientDocument: "12.345.678/0001-90",
-    clientSalary: 20000,
-    profession: "N/A",
-    professionalActivity: "Comércio varejista",
-    propertyType: "Loja comercial",
-    propertyValue: 500000,
-    propertyLocation: "Av. D, 1010 - São Paulo, SP",
-    desiredValue: 300000,
-    incomeProof: "Balanço financeiro dos últimos 2 anos",
-    creditDefense: "Empresa com histórico de crédito positivo",
-    documents: ["Contrato Social", "CNPJ", "Comprovante de endereço"],
-  },
-  // ... outros registros de operações ...
-]
+// Importando funções do Firebase
+import {
+  getOperations,
+  getOperationsByStatus,
+  searchOperations,
+  addOperation,
+  getOperation,
+  updateOperation,
+  uploadDocuments,
+  generateOperationNumber,
+  type Operation,
+} from "@/lib/operations"
 
 export default function MinhasOperacoesPage() {
+  const [operations, setOperations] = useState<Operation[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
-  const [selectedOperation, setSelectedOperation] = useState<(typeof operations)[0] | null>(null)
+  const [selectedOperation, setSelectedOperation] = useState<Operation | null>(null)
   const [currentStep, setCurrentStep] = useState(1)
+  const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     personType: "fisica",
     clientName: "",
@@ -104,8 +68,85 @@ export default function MinhasOperacoesPage() {
     desiredValue: "",
     incomeProof: "",
     creditDefense: "",
-    documents: null,
+    documents: null as FileList | null,
   })
+
+  // Carregar operações ao iniciar
+  useEffect(() => {
+    loadOperations()
+  }, [])
+
+  // Carregar operações com base no filtro de status
+  useEffect(() => {
+    if (statusFilter === "all") {
+      loadOperations()
+    } else {
+      loadOperationsByStatus(statusFilter)
+    }
+  }, [statusFilter])
+
+  // Carregar operações com base no termo de busca
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      loadOperations()
+    } else {
+      searchForOperations(searchTerm)
+    }
+  }, [searchTerm])
+
+  // Função para carregar todas as operações
+  const loadOperations = async () => {
+    try {
+      setLoading(true)
+      const data = await getOperations()
+      setOperations(data)
+    } catch (error) {
+      console.error("Erro ao carregar operações:", error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as operações.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Função para carregar operações por status
+  const loadOperationsByStatus = async (status: string) => {
+    try {
+      setLoading(true)
+      const data = await getOperationsByStatus(status)
+      setOperations(data)
+    } catch (error) {
+      console.error("Erro ao filtrar operações:", error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível filtrar as operações.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Função para buscar operações
+  const searchForOperations = async (term: string) => {
+    try {
+      setLoading(true)
+      const data = await searchOperations(term)
+      setOperations(data)
+    } catch (error) {
+      console.error("Erro ao buscar operações:", error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível buscar as operações.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } },
@@ -124,7 +165,11 @@ export default function MinhasOperacoesPage() {
     if (validateStep(currentStep)) {
       setCurrentStep((prev) => prev + 1)
     } else {
-      alert("Por favor, preencha todos os campos obrigatórios antes de prosseguir.")
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos obrigatórios antes de prosseguir.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -154,29 +199,116 @@ export default function MinhasOperacoesPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (validateStep(4)) {
-      console.log(formData)
-      // Here you would typically send the data to your backend
-      setIsDialogOpen(false)
-      setCurrentStep(1)
+      try {
+        setLoading(true)
+
+        // Gerar número de operação
+        const operationNumber = await generateOperationNumber()
+
+        // Criar objeto de operação
+        const newOperation: Omit<Operation, "id" | "createdAt" | "updatedAt"> = {
+          number: operationNumber,
+          client: formData.clientName,
+          value: Number.parseFloat(formData.desiredValue),
+          status: "Em andamento",
+          personType: formData.personType,
+          clientName: formData.clientName,
+          clientEmail: formData.clientEmail,
+          clientPhone: formData.clientPhone,
+          clientAddress: formData.clientAddress,
+          clientDocument: formData.clientDocument,
+          clientSalary: Number.parseFloat(formData.clientSalary),
+          profession: formData.profession,
+          professionalActivity: formData.professionalActivity,
+          propertyType: formData.propertyType,
+          propertyValue: Number.parseFloat(formData.propertyValue),
+          propertyLocation: formData.propertyLocation,
+          desiredValue: Number.parseFloat(formData.desiredValue),
+          incomeProof: formData.incomeProof,
+          creditDefense: formData.creditDefense,
+          documents: [],
+        }
+
+        // Adicionar operação ao Firestore
+        const savedOperation = await addOperation(newOperation)
+
+        // Upload de documentos se houver
+        if (formData.documents && formData.documents.length > 0) {
+          const uploadedDocs = await uploadDocuments(formData.documents, savedOperation.id!)
+
+          // Atualizar operação com URLs dos documentos
+          const docUrls = uploadedDocs.map((doc) => doc.url)
+          await updateOperation(savedOperation.id!, { documents: docUrls })
+        }
+
+        // Recarregar operações
+        await loadOperations()
+
+        // Fechar diálogo e resetar formulário
+        setIsDialogOpen(false)
+        setCurrentStep(1)
+        setFormData({
+          personType: "fisica",
+          clientName: "",
+          clientEmail: "",
+          clientPhone: "",
+          clientAddress: "",
+          clientDocument: "",
+          clientSalary: "",
+          profession: "",
+          professionalActivity: "",
+          propertyType: "",
+          propertyValue: "",
+          propertyLocation: "",
+          desiredValue: "",
+          incomeProof: "",
+          creditDefense: "",
+          documents: null,
+        })
+
+        toast({
+          title: "Sucesso",
+          description: "Operação cadastrada com sucesso!",
+        })
+      } catch (error) {
+        console.error("Erro ao cadastrar operação:", error)
+        toast({
+          title: "Erro",
+          description: "Não foi possível cadastrar a operação.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
     } else {
-      alert("Por favor, preencha todos os campos obrigatórios antes de enviar.")
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos obrigatórios antes de enviar.",
+        variant: "destructive",
+      })
     }
   }
 
-  const handleViewDetails = (operation: (typeof operations)[0]) => {
-    setSelectedOperation(operation)
-    setIsDetailsDialogOpen(true)
+  const handleViewDetails = async (operation: Operation) => {
+    try {
+      // Se já temos todos os detalhes, não precisamos buscar novamente
+      if (operation.id) {
+        const fullOperation = await getOperation(operation.id)
+        setSelectedOperation(fullOperation)
+        setIsDetailsDialogOpen(true)
+      }
+    } catch (error) {
+      console.error("Erro ao carregar detalhes da operação:", error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os detalhes da operação.",
+        variant: "destructive",
+      })
+    }
   }
-
-  const filteredOperations = operations.filter(
-    (op) =>
-      (op.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        op.client.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (statusFilter === "all" || op.status === statusFilter),
-  )
 
   const formatLabel = (key: string) => {
     const labels: { [key: string]: string } = {
@@ -212,7 +344,11 @@ export default function MinhasOperacoesPage() {
       return (
         <ul className="list-disc list-inside">
           {value.map((doc, index) => (
-            <li key={index}>{doc}</li>
+            <li key={index}>
+              <a href={doc} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                Documento {index + 1}
+              </a>
+            </li>
           ))}
         </ul>
       )
@@ -556,8 +692,8 @@ export default function MinhasOperacoesPage() {
                       Próximo
                     </Button>
                   ) : (
-                    <Button type="submit" className="ml-auto" size="sm">
-                      Cadastrar
+                    <Button type="submit" className="ml-auto" size="sm" disabled={loading}>
+                      {loading ? "Cadastrando..." : "Cadastrar"}
                     </Button>
                   )}
                 </div>
@@ -578,33 +714,47 @@ export default function MinhasOperacoesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOperations.map((op) => (
-              <TableRow key={op.id}>
-                <TableCell>{op.number}</TableCell>
-                <TableCell>{op.client}</TableCell>
-                <TableCell>R$ {op.value.toLocaleString("pt-BR")}</TableCell>
-                <TableCell>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      op.status === "Em andamento"
-                        ? "bg-yellow-200 text-yellow-800"
-                        : op.status === "Concluída"
-                          ? "bg-green-200 text-green-800"
-                          : "bg-blue-200 text-blue-800"
-                       
-    
-                    }`}
-                  >
-                    {op.status}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="sm" onClick={() => handleViewDetails(op)}>
-                    Ver detalhes
-                  </Button>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-4">
+                  Carregando operações...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : operations.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-4">
+                  Nenhuma operação encontrada
+                </TableCell>
+              </TableRow>
+            ) : (
+              operations.map((op) => (
+                <TableRow key={op.id}>
+                  <TableCell>{op.number}</TableCell>
+                  <TableCell>{op.client}</TableCell>
+                  <TableCell>R$ {op.value.toLocaleString("pt-BR")}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        op.status === "Em andamento"
+                          ? "bg-yellow-200 text-yellow-800"
+                          : op.status === "Concluída"
+                            ? "bg-green-200 text-green-800"
+                            : op.status === "Em análise"
+                              ? "bg-blue-200 text-blue-800"
+                              : "bg-red-200 text-red-800"
+                      }`}
+                    >
+                      {op.status}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" onClick={() => handleViewDetails(op)}>
+                      Ver detalhes
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
 
@@ -616,12 +766,15 @@ export default function MinhasOperacoesPage() {
               <DialogDescription>Informações detalhadas sobre a operação selecionada.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              {Object.entries(selectedOperation || {}).map(([key, value]) => (
-                <div key={key} className="space-y-1">
-                  <Label className="font-bold text-sm">{formatLabel(key)}</Label>
-                  <p className="text-sm">{formatValue(key, value)}</p>
-                </div>
-              ))}
+              {selectedOperation &&
+                Object.entries(selectedOperation)
+                  .filter(([key]) => key !== "id" && key !== "createdAt" && key !== "updatedAt")
+                  .map(([key, value]) => (
+                    <div key={key} className="space-y-1">
+                      <Label className="font-bold text-sm">{formatLabel(key)}</Label>
+                      <p className="text-sm">{formatValue(key, value)}</p>
+                    </div>
+                  ))}
             </div>
           </DialogContent>
         </Dialog>

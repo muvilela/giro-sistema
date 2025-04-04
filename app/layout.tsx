@@ -3,6 +3,7 @@ import localFont from "next/font/local"
 import "./globals.css"
 import { Smooch_Sans } from "next/font/google"
 import { ThemeProvider } from 'next-themes';
+import { Toaster } from "@/components/ui/toaster"
 
 
 const smoochSans = Smooch_Sans({

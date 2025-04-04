@@ -1,24 +1,23 @@
 "use client";
 
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getAnalytics } from "firebase/analytics";
+import { initializeApp } from "firebase/app"
+import { getFirestore } from "firebase/firestore"
+import { getAuth } from "firebase/auth"
+import { getStorage } from "firebase/storage"
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyCXKd8qENzlzfezZy5ECe7PsEp7k9G5C6E",
+  authDomain: "giro-sistema-5bc37.firebaseapp.com",
+  projectId: "giro-sistema-5bc37",
+  storageBucket: "giro-sistema-5bc37.firebasestorage.app",
+  messagingSenderId: "341855560527",
+  appId: "1:341855560527:web:d2b11eed8f2cb02426db3a",
+  measurementId: "G-V2JSZG445V"
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const app = initializeApp(firebaseConfig)
 
-// Analytics só deve ser inicializado no cliente
-if (typeof window !== "undefined") {
-  getAnalytics(app);
-}
-
-export const auth = getAuth(app);
+// Inicializa os serviços
+export const db = getFirestore(app)
+export const auth = getAuth(app)
+export const storage = getStorage(app)
