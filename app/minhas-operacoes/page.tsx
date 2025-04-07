@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -76,6 +76,21 @@ import {
   generateOperationNumber,
   type Operation,
 } from "@/lib/operations";
+
+// Importando funções para buscar parceiros do Firebase
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebaseConfig";
+
+// Interface para parceiros
+interface Partner {
+  id: string;
+  nomeCompleto: string;
+  tipoDocumento: string;
+  documento: string;
+  email: string;
+  telefone: string;
+  [key: string]: any; // Para outros campos que possam existir
+}
 
 // Tipos de imóveis disponíveis
 const propertyTypes = [
@@ -180,6 +195,7 @@ interface ValidationErrors {
   incomeProof?: string;
   creditDefense?: string;
   documents?: string;
+  partnerId?: string;
 }
 
 // Declaração para o Google Maps API
@@ -206,6 +222,11 @@ export default function MinhasOperacoesPage() {
   );
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
+
+  // Estado para armazenar parceiros
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [loadingPartners, setLoadingPartners] = useState(false);
+
   const [formData, setFormData] = useState({
     personType: "fisica",
     clientName: "",
@@ -223,6 +244,7 @@ export default function MinhasOperacoesPage() {
     incomeProof: "",
     creditDefense: "",
     documents: null as FileList | null,
+    partnerId: "", // Novo campo para o parceiro que indicou
   });
 
   // Estado para mensagens de sucesso e erro
@@ -248,7 +270,27 @@ export default function MinhasOperacoesPage() {
   // Carregar operações ao iniciar
   useEffect(() => {
     loadOperations();
+    loadPartners(); // Carregar parceiros ao iniciar
   }, []);
+
+  // Função para carregar parceiros do Firebase
+  const loadPartners = async () => {
+    try {
+      setLoadingPartners(true);
+      const querySnapshot = await getDocs(collection(db, "parceiros"));
+      const partnersData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Partner[];
+      setPartners(partnersData);
+    } catch (error) {
+      console.error("Erro ao carregar parceiros:", error);
+      setErrorMessage("Não foi possível carregar os parceiros.");
+      setTimeout(() => setErrorMessage(null), 5000);
+    } finally {
+      setLoadingPartners(false);
+    }
+  };
 
   // Inicializar o autocomplete do Google Maps quando a API estiver carregada
   useEffect(() => {
@@ -582,6 +624,7 @@ export default function MinhasOperacoesPage() {
             desiredValue: Number.parseFloat(formData.desiredValue),
             incomeProof: formData.incomeProof,
             creditDefense: formData.creditDefense,
+            partnerId: formData.partnerId || null, // Incluir o parceiro que indicou
           };
 
           await updateOperation(selectedOperation.id, updatedOperation);
@@ -633,6 +676,7 @@ export default function MinhasOperacoesPage() {
             incomeProof: formData.incomeProof,
             creditDefense: formData.creditDefense,
             documents: [],
+            partnerId: formData.partnerId || null, // Incluir o parceiro que indicou
           };
 
           const savedOperation = await addOperation(newOperation);
@@ -696,6 +740,7 @@ export default function MinhasOperacoesPage() {
       incomeProof: "",
       creditDefense: "",
       documents: null,
+      partnerId: "", // Resetar o parceiro
     });
     setValidationErrors({});
   };
@@ -736,6 +781,7 @@ export default function MinhasOperacoesPage() {
       incomeProof: operation.incomeProof,
       creditDefense: operation.creditDefense,
       documents: null,
+      partnerId: operation.partnerId || "", // Incluir o parceiro que indicou
     });
 
     setCurrentStep(1);
@@ -803,6 +849,7 @@ export default function MinhasOperacoesPage() {
       number: "Número da Operação",
       status: "Status",
       value: "Valor da Operação",
+      partnerId: "Parceiro Indicador",
     };
     return labels[key] || key.charAt(0).toUpperCase() + key.slice(1);
   };
@@ -836,6 +883,10 @@ export default function MinhasOperacoesPage() {
           ))}
         </ul>
       );
+    }
+    if (key === "partnerId" && value) {
+      const partner = partners.find((p) => p.id === value);
+      return partner ? partner.nomeCompleto : value;
     }
     return value;
   };
@@ -974,6 +1025,41 @@ export default function MinhasOperacoesPage() {
                 }`}
               />
               <ValidationError error={validationErrors.clientAddress} />
+            </div>
+
+            {/* Campo para selecionar o parceiro que indicou */}
+            <div className="space-y-1">
+              <Label htmlFor="partnerId" className="text-xs">
+                Parceiro que Indicou
+              </Label>
+              <Select
+                name="partnerId"
+                value={formData.partnerId}
+                onValueChange={(value) =>
+                  handleSelectChange("partnerId", value)
+                }
+              >
+                <SelectTrigger
+                  className={`h-8 ${
+                    validationErrors.partnerId ? "border-red-500" : ""
+                  }`}
+                >
+                  <SelectValue placeholder="Selecione um parceiro (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {partners.map((partner) => (
+                    <SelectItem key={partner.id} value={partner.id}>
+                      {partner.nomeCompleto} -{" "}
+                      {partner.tipoDocumento === "cpf" ? "CPF" : "CNPJ"}:{" "}
+                      {partner.tipoDocumento === "cpf"
+                        ? formatCPF(partner.documento)
+                        : formatCNPJ(partner.documento)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <ValidationError error={validationErrors.partnerId} />
             </div>
           </div>
         );
@@ -1262,7 +1348,6 @@ export default function MinhasOperacoesPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="cursor-pointer">
-                  <AvatarImage src="/img/tiago.cazarotto.jpg" />
                   <AvatarFallback>TC</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
@@ -1451,19 +1536,20 @@ export default function MinhasOperacoesPage() {
               <TableHead>Cliente</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Parceiro</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-4">
+                <TableCell colSpan={6} className="text-center py-4">
                   Carregando operações...
                 </TableCell>
               </TableRow>
             ) : operations.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-4">
+                <TableCell colSpan={6} className="text-center py-4">
                   Nenhuma operação encontrada
                 </TableCell>
               </TableRow>
@@ -1487,6 +1573,16 @@ export default function MinhasOperacoesPage() {
                     >
                       {op.status}
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    {op.partnerId ? (
+                      partners.find((p) => p.id === op.partnerId)
+                        ?.nomeCompleto || "Parceiro não encontrado"
+                    ) : (
+                      <span className="text-muted-foreground text-xs">
+                        Nenhum
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
